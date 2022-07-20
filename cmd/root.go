@@ -100,9 +100,9 @@ func WithDialer(d cloudsql.Dialer) Option {
 // NewCommand returns a Command object representing an invocation of the proxy.
 func NewCommand(opts ...Option) *Command {
 	cmd := &cobra.Command{
-		Use:     "cloud_sql_proxy instance_connection_name...",
+		Use:     "cloudsql-proxy instance_connection_name...",
 		Version: versionString,
-		Short:   "cloud_sql_proxy provides a secure way to authorize connections to Cloud SQL.",
+		Short:   "cloudsql-proxy provides a secure way to authorize connections to Cloud SQL.",
 		Long: `The Cloud SQL Auth proxy provides IAM-based authorization and encryption when
 connecting to Cloud SQL instances. It listens on a local port and forwards connections
 to your instance's IP address, providing a secure connection without having to manage
@@ -177,7 +177,7 @@ the maximum time has passed. Defaults to 0s.`)
 	cmd.PersistentFlags().StringVar(&c.conf.QuotaProject, "quota-project", "",
 		`Specifies the project to use for Cloud SQL Admin API quota tracking.
 The IAM principal must have the "serviceusage.services.use" permission
-for the given project. See https://cloud.google.com/service-usage/docs/overview and 
+for the given project. See https://cloud.google.com/service-usage/docs/overview and
 https://cloud.google.com/storage/docs/requester-pays`)
 
 	// Global and per instance flags
