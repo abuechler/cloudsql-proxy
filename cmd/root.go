@@ -100,16 +100,61 @@ func WithDialer(d cloudsql.Dialer) Option {
 	}
 }
 
+var longHelp = `
+The Cloud SQL Auth proxy provides IAM-based authorization and TLS 1.3 encryption
+when connecting to Cloud SQL instances. For every provided instance connection
+name, the proxy creates a local listener that will proxy traffic to and from your
+Cloud SQL instance using an encrypted connection based on an ephemeral certificate
+that is renewed by the proxy every hour.
+
+With the proxy, clients need not manage SSL certificates manually and get the
+benefit of IAM authorization of all client connections.
+
+To start the proxy, you will need your instance connection name which may be found
+in the Cloud SQL instance overview page or by using gcloud with the following
+command:
+
+    gcloud sql instances describe INSTANCE --format='value(connectionName)'
+
+Starting the proxy will look like this for example:
+
+    cloudsql-proxy my-project:us-central1:my-db-server
+
+By default, the proxy will determine the database engine and start a listener
+on localhost using the default database engine's port, i.e., MySQL is 3306,
+Postgres is 5432, SQL Server is 1433. If multiple instances are specified which
+all use the same database engine, the first will be started on the default
+database port and subsequent instances will be incremented from there (e.g.,
+3306, 3307, 3308, etc). If a caller prefers to increment all listeners starting
+with a static value, the --port flag may be used. All listeners use localhost.
+To override this behavior, use the --address flag.
+
+The proxy supports overriding configuration on an instance-level with an
+optional query string syntax using the corresponding full flag name. The query
+string takes the form of a URL query string and should be appended to the
+INSTANCE_CONNECTION_NAME, e.g.,
+
+    'my-project:us-central1:my-db-server?key1=value1&key2=value2'
+
+When using the optional query string syntax, quotes must wrap the instance
+connection name and query string to prevent conflicts with the shell. For
+example, to override the address and port for one instance but otherwise use
+the default behavior, use:
+
+    cloudsql-proxy my-project:us-central1:my-db-server \
+	    'my-project:us-central1:my-other-server?address=0.0.0.0&port=7000'
+
+Not all flags are supported as query strings. Supported flags are marked with
+a leading asterisk in parentheses (*) below.
+`
+
 // NewCommand returns a Command object representing an invocation of the proxy.
 func NewCommand(opts ...Option) *Command {
 	cmd := &cobra.Command{
-		Use:     "cloud_sql_proxy instance_connection_name...",
+		Use:     "cloudsql-proxy INSTANCE_CONNECTION_NAME...",
 		Version: versionString,
-		Short:   "cloud_sql_proxy provides a secure way to authorize connections to Cloud SQL.",
-		Long: `The Cloud SQL Auth proxy provides IAM-based authorization and encryption when
-connecting to Cloud SQL instances. It listens on a local port and forwards connections
-to your instance's IP address, providing a secure connection without having to manage
-any client SSL certificates.`,
+		Short:   "cloudsql-proxy authorizes and encrypts connections to Cloud SQL.",
+		Long:    longHelp,
 	}
 
 	logger := log.NewStdLogger(os.Stdout, os.Stderr)
@@ -190,15 +235,15 @@ https://cloud.google.com/storage/docs/requester-pays`)
 
 	// Global and per instance flags
 	cmd.PersistentFlags().StringVarP(&c.conf.Addr, "address", "a", "127.0.0.1",
-		"Address on which to bind Cloud SQL instance listeners.")
+		"(*) Address on which to bind Cloud SQL instance listeners.")
 	cmd.PersistentFlags().IntVarP(&c.conf.Port, "port", "p", 0,
-		"Initial port to use for listeners. Subsequent listeners increment from this value.")
+		"(*) Initial port to use for listeners. Subsequent listeners increment from this value.")
 	cmd.PersistentFlags().StringVarP(&c.conf.UnixSocket, "unix-socket", "u", "",
-		`Enables Unix sockets for all listeners using the provided directory.`)
+		`(*) Enables Unix sockets for all listeners using the provided directory.`)
 	cmd.PersistentFlags().BoolVarP(&c.conf.IAMAuthN, "auto-iam-authn", "i", false,
-		"Enables Automatic IAM Authentication for all instances")
+		"(*) Enables Automatic IAM Authentication for all instances")
 	cmd.PersistentFlags().BoolVar(&c.conf.PrivateIP, "private-ip", false,
-		"Connect to the private ip address for all instances")
+		"(*) Connect to the private ip address for all instances")
 
 	return c
 }
